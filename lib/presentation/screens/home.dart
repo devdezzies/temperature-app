@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:temperature/bloc/weather_bloc.dart';
 import 'package:temperature/constants/colors.dart';
+import '../widgets/info_card.dart';
 
-import '../components/hourly_forecast_item.dart';
-import '../components/info_card.dart';
-import 'package:http/http.dart' as http;
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -14,26 +13,11 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  Future<Map<String, dynamic>> getCurrentWeather() async {
-    try {
-      final result = await http.get(Uri.parse(
-          "https://api.openweathermap.org/data/2.5/forecast?q=bogor&APPID=0709f265f4a711780fc3d02683917c2a"));
 
-      final data = jsonDecode(result.body);
-
-      if (data['cod'] != "200") {
-        throw 'An unexpected error occurred';
-      }
-      return data;
-    } catch (e) {
-      throw e.toString();
-    }
-  }
-
-  void _refreshScreen() {
-    setState(() {
-      getCurrentWeather();
-    });
+  @override
+  void initState() {
+    super.initState();
+    context.read<WeatherBloc>().add(WeatherFetched());
   }
 
   IconData chooseWeatherIcon(String current) {
@@ -67,7 +51,9 @@ class _HomeState extends State<Home> {
           Container(
               margin: const EdgeInsets.only(right: 10),
               child: TextButton(
-                onPressed: _refreshScreen,
+                onPressed: () {
+                  context.read<WeatherBloc>().add(WeatherFetched());
+                },
                 style: const ButtonStyle(
                     //overlayColor: WidgetStateColor.transparent,
                     shape: WidgetStatePropertyAll(CircleBorder()),
@@ -81,32 +67,17 @@ class _HomeState extends State<Home> {
               ))
         ],
       ),
-      body: FutureBuilder(
-        future: getCurrentWeather(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const ColoredBox(
-              color: WeatherColor.sunny,
-              child: Center(
-                child: CircularProgressIndicator(
-                  backgroundColor: WeatherColor.sunny,
-                ),
-              ),
-            );
+      body: BlocBuilder<WeatherBloc, WeatherState>(
+        builder: (context, state) {
+          if (state is FetchFail) {
+            return const SizedBox.shrink();
           }
 
-          if (snapshot.hasError) {
-            return Text(snapshot.error.toString());
+          if (state is! FetchSuccess) {
+            return const Center(child: CircularProgressIndicator(),);
           }
 
-          final data = snapshot.data!;
-          final double temp = data['list'][0]['main']['temp'] - 273.1;
-          final String currentSkyDesc =
-              data['list'][0]['weather'][0]['description'];
-
-          final currentWindSpeed = data['list'][0]['wind']['speed'];
-          final currentHumidity = data['list'][0]['main']['humidity'];
-          final currentVisibility = data['list'][0]['visibility'];
+          final data = state.weatherModel;
 
           return ListView(
             children: <Widget>[
@@ -126,7 +97,7 @@ class _HomeState extends State<Home> {
                       padding: const EdgeInsets.only(
                           top: 2, bottom: 2, left: 15, right: 15),
                       child: Text(
-                        data['list'][0]['dt_txt'].toString().split(" ").first,
+                        data.currentHumidity.toString(),
                         style: const TextStyle(
                             color: WeatherColor.sunny,
                             fontWeight: FontWeight.w600),
@@ -135,7 +106,7 @@ class _HomeState extends State<Home> {
                     Container(
                         margin: const EdgeInsets.only(top: 10),
                         child: Text(
-                          currentSkyDesc,
+                          data.currentSkyDesc,
                           style: const TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 20),
                         )),
@@ -143,7 +114,7 @@ class _HomeState extends State<Home> {
                         alignment: Alignment.topCenter,
                         decoration: const BoxDecoration(),
                         child: Text(
-                          temp.toStringAsPrecision(2),
+                          data.currentTemperature.toStringAsPrecision(2),
                           style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               fontSize: 200,
@@ -187,52 +158,52 @@ class _HomeState extends State<Home> {
                                 children: <Widget>[
                                   AdditionalInfo(
                                     typeCard: "Wind",
-                                    value: "$currentWindSpeed",
+                                    value: data.currentWindSpeed.toString(),
                                     iconSymbol: Icons.wind_power,
                                   ),
                                   AdditionalInfo(
                                     typeCard: "Humidity",
-                                    value: "$currentHumidity%",
+                                    value: data.currentHumidity.toString(),
                                     iconSymbol: Icons.water_drop_outlined,
                                   ),
                                   AdditionalInfo(
                                     typeCard: "Visibility",
-                                    value: "$currentVisibility",
+                                    value: data.currentVisibility.toString(),
                                     iconSymbol: Icons.visibility,
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            child: SizedBox(
-                              height: 120,
-                              child: ListView.builder(
-                                  itemCount: 1, // number of container that will get fetched on demand
-                                  scrollDirection: Axis.horizontal,
-                                  itemBuilder: (context, idx) => Container(
-                                        margin: const EdgeInsets.symmetric(
-                                            horizontal: 20),
-                                        child: Row(
-                                            children: List.generate(
-                                                data['cnt'] - 1, (int idx) {
-                                          return HourlyForecastItem(
-                                              hour: data['list'][idx]['dt_txt']
-                                                  .toString()
-                                                  .split(" ")
-                                                  .last,
-                                              temperature: data['list'][idx]
-                                                      ['main']['temp']
-                                                  .toString(),
-                                              icon: chooseWeatherIcon(
-                                                  data['list'][idx]['weather']
-                                                          [0]['main']
-                                                      .toString()));
-                                        })),
-                                      )),
-                            ),
-                          ),
+                          // Container(
+                          //   padding: const EdgeInsets.symmetric(vertical: 15),
+                          //   child: SizedBox(
+                          //     height: 120,
+                          //     child: ListView.builder(
+                          //         itemCount: 1, // number of container that will get fetched on demand
+                          //         scrollDirection: Axis.horizontal,
+                          //         itemBuilder: (context, idx) => Container(
+                          //               margin: const EdgeInsets.symmetric(
+                          //                   horizontal: 20),
+                          //               child: Row(
+                          //                   children: List.generate(
+                          //                       data['cnt'] - 1, (int idx) {
+                          //                 return HourlyForecastItem(
+                          //                     hour: data['list'][idx]['dt_txt']
+                          //                         .toString()
+                          //                         .split(" ")
+                          //                         .last,
+                          //                     temperature: data['list'][idx]
+                          //                             ['main']['temp']
+                          //                         .toString(),
+                          //                     icon: chooseWeatherIcon(
+                          //                         data['list'][idx]['weather']
+                          //                                 [0]['main']
+                          //                             .toString()));
+                          //               })),
+                          //             )),
+                          //   ),
+                          // ),
                         ],
                       ),
                     )

@@ -10,13 +10,17 @@ class WeatherModel {
   final double currentWindSpeed;
   final int currentHumidity;
   final int currentVisibility;
+  final List<dynamic> weatherForecast;
+  final int numberOfEvents;
 
   WeatherModel(
       {required this.currentTemperature,
       required this.currentSkyDesc,
       required this.currentWindSpeed,
       required this.currentHumidity,
-      required this.currentVisibility});
+      required this.currentVisibility,
+      required this.weatherForecast,
+      required this.numberOfEvents});
 
   
 
@@ -28,7 +32,9 @@ class WeatherModel {
         currentSkyDesc: currWeather['weather'][0]['description'],
         currentWindSpeed: currWeather['wind']['speed'],
         currentHumidity: currWeather['main']['humidity'],
-        currentVisibility: currWeather['visibility']);
+        currentVisibility: currWeather['visibility'],
+        weatherForecast: map['list'],
+        numberOfEvents: map['cnt']);
   }
 
 }

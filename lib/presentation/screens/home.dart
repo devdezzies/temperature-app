@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:temperature/bloc/weather_bloc.dart';
 import 'package:temperature/constants/colors.dart';
+import '../widgets/hourly_forecast_item.dart';
 import '../widgets/info_card.dart';
-
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -13,7 +13,6 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-
   @override
   void initState() {
     super.initState();
@@ -74,7 +73,9 @@ class _HomeState extends State<Home> {
           }
 
           if (state is! FetchSuccess) {
-            return const Center(child: CircularProgressIndicator(),);
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           final data = state.weatherModel;
@@ -97,7 +98,7 @@ class _HomeState extends State<Home> {
                       padding: const EdgeInsets.only(
                           top: 2, bottom: 2, left: 15, right: 15),
                       child: Text(
-                        data.currentHumidity.toString(),
+                        DateTime.now().toIso8601String(),
                         style: const TextStyle(
                             color: WeatherColor.sunny,
                             fontWeight: FontWeight.w600),
@@ -114,7 +115,8 @@ class _HomeState extends State<Home> {
                         alignment: Alignment.topCenter,
                         decoration: const BoxDecoration(),
                         child: Text(
-                          data.currentTemperature.toStringAsPrecision(2),
+                          (data.currentTemperature - 272.15)
+                              .toStringAsPrecision(2),
                           style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               fontSize: 200,
@@ -175,35 +177,39 @@ class _HomeState extends State<Home> {
                               ),
                             ),
                           ),
-                          // Container(
-                          //   padding: const EdgeInsets.symmetric(vertical: 15),
-                          //   child: SizedBox(
-                          //     height: 120,
-                          //     child: ListView.builder(
-                          //         itemCount: 1, // number of container that will get fetched on demand
-                          //         scrollDirection: Axis.horizontal,
-                          //         itemBuilder: (context, idx) => Container(
-                          //               margin: const EdgeInsets.symmetric(
-                          //                   horizontal: 20),
-                          //               child: Row(
-                          //                   children: List.generate(
-                          //                       data['cnt'] - 1, (int idx) {
-                          //                 return HourlyForecastItem(
-                          //                     hour: data['list'][idx]['dt_txt']
-                          //                         .toString()
-                          //                         .split(" ")
-                          //                         .last,
-                          //                     temperature: data['list'][idx]
-                          //                             ['main']['temp']
-                          //                         .toString(),
-                          //                     icon: chooseWeatherIcon(
-                          //                         data['list'][idx]['weather']
-                          //                                 [0]['main']
-                          //                             .toString()));
-                          //               })),
-                          //             )),
-                          //   ),
-                          // ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            child: SizedBox(
+                              height: 120,
+                              child: ListView.builder(
+                                itemCount:
+                                    1, // number of container that will get fetched on demand
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder: (context, idx) => Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  child: Row(
+                                    children: List.generate(
+                                        data.numberOfEvents - 1, (int idx) {
+                                      return HourlyForecastItem(
+                                          hour: data.weatherForecast[idx]
+                                                  ['dt_txt']
+                                              .toString()
+                                              .split(" ")
+                                              .last,
+                                          temperature: data.weatherForecast[idx]
+                                                  ['main']['temp']
+                                              .toString(),
+                                          icon: chooseWeatherIcon(data
+                                              .weatherForecast[idx]['weather']
+                                                  [0]['main']
+                                              .toString()));
+                                    }),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     )
